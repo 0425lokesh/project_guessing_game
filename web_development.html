@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4-Digit Guessing Game</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            background: linear-gradient(to right, #ff758c, #ff7eb3);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #game {
+            background-color: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            width: 90%;
+            max-width: 600px;
+        }
+
+        #nameInput, #gameBoard, #results, #bestScores {
+            background-color: #ffe6e6;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        input[type="text"] {
+            width: 80%;
+            padding: 8px;
+            margin: 10px 0;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin-top: 15px;
+            font-size: 14px;
+            background-color: #ff5f6d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #e4505d;
+        }
+
+        #guessInput input {
+            width: 45px;
+            text-align: center;
+            font-size: 20px;
+            margin: 0 5px;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+        }
+
+        #clueBox {
+            background-color: #ffcccb;
+            border-radius: 10px;
+            padding: 10px;
+            margin-top: 20px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        h1, h2 {
+            color: #333;
+            font-size: 24px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #ff5f6d;
+            color: white;
+        }
+
+        .notification {
+            padding: 15px;
+            margin-top: 15px;
+            border: 1px solid transparent;
+            border-radius: 5px;
+            display: inline-block;
+        }
+
+        .notification.success {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+
+        .notification.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+
+        .attempt-box {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+            padding: 10px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game">
+        <div id="nameInput">
+            <h1>Enter Your Name</h1>
+            <input type="text" id="playerName" placeholder="Enter your name here">
+            <button onclick="startGame()">Start Game</button>
+        </div>
+
+        <div id="gameBoard" style="display: none;">
+            <div id="header">
+                <h1>Guess the 4-Digit Number</h1>
+                <p id="playerDisplay"></p>
+            </div>
+
+            <div id="guessSection">
+                <h2>Enter Your Guess</h2>
+                <div id="guessInput">
+                    <input type="text" id="guess1" maxlength="1" oninput="moveToNext(this, 'guess2')">
+                    <input type="text" id="guess2" maxlength="1" oninput="moveToNext(this, 'guess3')">
+                    <input type="text" id="guess3" maxlength="1" oninput="moveToNext(this, 'guess4')">
+                    <input type="text" id="guess4" maxlength="1" oninput="moveToNext(this, 'submitButton')">
+                </div>
+                <button id="submitButton" onclick="submitGuess()">Submit</button>
+                <div id="clueBox">
+                    <p>Clues:</p>
+                    <p>+ : Correct number and position</p>
+                    <p>- : Correct number but wrong position</p>
+                </div>
+                <div class="attempt-box" id="attemptsDisplay"></div>
+                <div id="notification"></div>
+                <button onclick="resetGame()">Reset</button>
+            </div>
+
+            <div id="results">
+                <h2>Results</h2>
+                <div id="clueResults"></div>
+            </div>
+        </div>
+
+        <div id="bestScores" style="display: none;">
+            <h2>Best Scores</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Player</th>
+                        <th>Attempts</th>
+                        <th>Time (seconds)</th>
+                    </tr>
+                </thead>
+                <tbody id="scoresTable">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        let playerName = '';
+        let secretNumber = '';
+        let startTime;
+        const maxAttempts = 10;
+        let attempts = 0;
+        const bestScores = [];
+
+        function startGame() {
+            playerName = document.getElementById('playerName').value;
+            if (playerName) {
+                document.getElementById('playerDisplay').innerText = `Player: ${playerName}`;
+                document.getElementById('nameInput').style.display = 'none';
+                document.getElementById('gameBoard').style.display = 'block';
+                secretNumber = generateSecretNumber();
+                startTime = new Date();
+            } else {
+                alert('Please enter your name');
+            }
+        }
+
+        function generateSecretNumber() {
+            let number = '';
+            while (number.length < 4) {
+                const digit = Math.floor(Math.random() * 10).toString();
+                if (!number.includes(digit)) {
+                    number += digit;
+                }
+            }
+            return number;
+        }
+
+        function moveToNext(current, nextFieldID) {
+            if (current.value.length === current.maxLength) {
+                document.getElementById(nextFieldID).focus();
+            }
+        }
+
+        function submitGuess() {
+            const guess = document.getElementById('guess1').value + document.getElementById('guess2').value +
+                          document.getElementById('guess3').value + document.getElementById('guess4').value;
+            if (guess.length !== 4 || !/^\d{4}$/.test(guess) || hasRepeatedDigits) {
+                displayNotification('Please enter a valid 4-digit number with unique digits', 'error');
+                return;
+            }
+            
+            attempts++;
+            document.getElementById('attemptsDisplay').innerText = `Attempts: ${attempts}`;
+            const clues = getClues(guess);
+            displayClues(clues);
+
+            if (guess === secretNumber) {
+                const timeTaken = Math.floor((new Date() - startTime) / 1000);
+                displayNotification(`Congratulations ${playerName}! You guessed the number in ${attempts} attempts and ${timeTaken} seconds.`, 'success');
+                saveScore(playerName, attempts, timeTaken);
+                resetGame();
+            } else if (attempts >= maxAttempts) {
+                displayNotification(`Sorry ${playerName}, you've used all ${maxAttempts} attempts. The number was ${secretNumber}.`, 'error');
+                resetGame();
+            } else {
+                displayNotification(`Your guess ${guess} is incorrect. Please try again.`, 'error');
+            }
+        }
+
+        function hasRepeatedDigits(number) {
+            return new Set(number).size !== number.length;
+        }
+
+        function getClues(guess) {
+            let clues = '';
+            for (let i = 0; i < 4; i++) {
+                if (guess[i] === secretNumber[i]) {
+                    clues += '+';
+                } else if (secretNumber.includes(guess[i])) {
+                    clues += '-';
+                }
+            }
+            return clues;
+        }
+
+        function displayClues(clues) {
+            const clueResults = document.getElementById('clueResults');
+            const clueElement = document.createElement('p');
+            clueElement.innerText = `Attempt ${attempts}: ${clues}`;
+            clueResults.appendChild(clueElement);
+        }
+
+        function displayNotification(message, type) {
+            const notification = document.getElementById('notification');
+            notification.innerHTML = `<div class="notification ${type}">${message}</div>`;
+        }
+
+        function resetGame() {
+            attempts = 0;
+            document.getElementById('clueResults').innerHTML = '';
+            document.getElementById('attemptsDisplay').innerText = '';
+            document.getElementById('notification').innerHTML = '';
+            document.getElementById('nameInput').style.display = 'block';
+            document.getElementById('gameBoard').style.display = 'none';
+            document.getElementById('playerName').value = '';
+            document.getElementById('guess1').value = '';
+            document.getElementById('guess2').value = '';
+            document.getElementById('guess3').value = '';
+            document.getElementById('guess4').value = '';
+        }
+
+        function saveScore(player, attempts, time) {
+            bestScores.push({ player, attempts, time });
+            updateScoresTable();
+        }
+
+        function updateScoresTable() {
+            const scoresTable = document.getElementById('scoresTable');
+            scoresTable.innerHTML = '';
+            bestScores.forEach(score => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${score.player}</td><td>${score.attempts}</td><td>${score.time}</td>`;
+                scoresTable.appendChild(row);
+            });
+            document.getElementById('bestScores').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
